@@ -1,0 +1,294 @@
+openapi: 3.1.0
+info:
+  title: Ramkhamhaeng Hospital API
+  description: >
+    API สำหรับค้นหาแพทย์และตารางออกตรวจ จองคิว/นัดหมายออนไลน์
+    ค้นหาแพ็กเกจตรวจสุขภาพและโปรโมชั่น ตรวจสอบสิทธิประกันและประเมินราคา
+    และดึงบทความ/ข่าวสารสุขภาพ ของโรงพยาบาลรามคำแหง
+  version: "1.0.0"
+servers:
+  - url: https://www.ram-hosp.co.th/api/v1
+    description: Production server (แก้ไข path ให้ตรงกับ backend จริง)
+ 
+paths:
+  /doctors:
+    get:
+      operationId: searchDoctors
+      summary: ค้นหาแพทย์ตามชื่อ แผนก หรือความเชี่ยวชาญ
+      parameters:
+        - name: query
+          in: query
+          description: คำค้นหา เช่น ชื่อแพทย์ หรือความเชี่ยวชาญ
+          required: false
+          schema:
+            type: string
+        - name: department
+          in: query
+          description: แผนก/ศูนย์การแพทย์ เช่น "หัวใจ", "กระดูกและข้อ"
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: รายชื่อแพทย์ที่ตรงกับเงื่อนไข
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Doctor"
+ 
+  /doctors/{doctorId}/schedule:
+    get:
+      operationId: getDoctorSchedule
+      summary: ดูตารางออกตรวจของแพทย์ตาม ID
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ตารางออกตรวจของแพทย์
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Schedule"
+ 
+  /appointments:
+    post:
+      operationId: createAppointment
+      summary: จองคิว/นัดหมายออนไลน์กับแพทย์
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppointmentRequest"
+      responses:
+        "201":
+          description: สร้างการนัดหมายสำเร็จ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+ 
+  /appointments/{appointmentId}:
+    get:
+      operationId: getAppointment
+      summary: ตรวจสอบสถานะการนัดหมาย
+      parameters:
+        - name: appointmentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: รายละเอียดการนัดหมาย
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+ 
+  /packages:
+    get:
+      operationId: searchHealthPackages
+      summary: ค้นหาแพ็กเกจตรวจสุขภาพและโปรโมชั่น
+      parameters:
+        - name: category
+          in: query
+          description: ประเภทแพ็กเกจ เช่น "ตรวจสุขภาพประจำปี", "ตรวจก่อนแต่งงาน"
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: รายการแพ็กเกจที่ตรงกับเงื่อนไข
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/HealthPackage"
+ 
+  /insurance/check:
+    get:
+      operationId: checkInsuranceRights
+      summary: ตรวจสอบสิทธิประกัน/สิทธิการรักษาของผู้ป่วย
+      parameters:
+        - name: insuranceProvider
+          in: query
+          description: ชื่อบริษัทประกันหรือสิทธิ เช่น "ประกันสังคม", "ประกันสุขภาพ AIA"
+          required: true
+          schema:
+            type: string
+        - name: treatment
+          in: query
+          description: รายการรักษาหรือหัตถการที่ต้องการตรวจสอบสิทธิ
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: ผลการตรวจสอบสิทธิ
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InsuranceResult"
+ 
+  /estimate:
+    post:
+      operationId: estimatePrice
+      summary: ประเมินค่าใช้จ่ายเบื้องต้นตามรายการรักษาและสิทธิ
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EstimateRequest"
+      responses:
+        "200":
+          description: ผลประเมินราคาเบื้องต้น
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EstimateResult"
+ 
+  /articles:
+    get:
+      operationId: searchHealthArticles
+      summary: ค้นหาบทความและข่าวสารสุขภาพ
+      parameters:
+        - name: query
+          in: query
+          description: คำค้นหาหัวข้อบทความ
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: รายการบทความที่ตรงกับเงื่อนไข
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Article"
+ 
+components:
+  schemas:
+    Doctor:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        department:
+          type: string
+        specialty:
+          type: string
+ 
+    Schedule:
+      type: object
+      properties:
+        doctorId:
+          type: string
+        slots:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+              time:
+                type: string
+              available:
+                type: boolean
+ 
+    AppointmentRequest:
+      type: object
+      required: [doctorId, date, time, patientName, phone]
+      properties:
+        doctorId:
+          type: string
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+        patientName:
+          type: string
+        phone:
+          type: string
+ 
+    Appointment:
+      type: object
+      properties:
+        appointmentId:
+          type: string
+        status:
+          type: string
+        doctorId:
+          type: string
+        date:
+          type: string
+          format: date
+        time:
+          type: string
+ 
+    HealthPackage:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        price:
+          type: number
+        details:
+          type: string
+ 
+    InsuranceResult:
+      type: object
+      properties:
+        eligible:
+          type: boolean
+        coverageDetails:
+          type: string
+ 
+    EstimateRequest:
+      type: object
+      required: [treatment]
+      properties:
+        treatment:
+          type: string
+        insuranceProvider:
+          type: string
+ 
+    EstimateResult:
+      type: object
+      properties:
+        estimatedPrice:
+          type: number
+        currency:
+          type: string
+          default: THB
+        notes:
+          type: string
+ 
+    Article:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        summary:
+          type: string
+ 
